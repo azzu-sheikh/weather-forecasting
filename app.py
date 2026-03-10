@@ -14,7 +14,7 @@ import torch
 
 # ---------------- CONFIG ----------------
 
-API_KEY="YOUR_OPENWEATHER_API_KEY"
+API_KEY="d0f4215f39312e5de368ee8edad554b8"
 
 DEFAULT_BG="wallpapers/bg1.png"
 
@@ -424,3 +424,4 @@ Give practical advice.
         st.markdown(response)
 
     st.session_state.messages.append({"role":"assistant","content":response})
+
