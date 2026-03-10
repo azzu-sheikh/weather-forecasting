@@ -1,29 +1,28 @@
 import streamlit as st
 import requests
 import datetime
+import base64
 import pandas as pd
 import numpy as np
-import base64
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
 from sklearn.linear_model import LinearRegression
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
 import folium
 from streamlit_folium import st_folium
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 
 API_KEY="d0f4215f39312e5de368ee8edad554b8"
 
-st.set_page_config(page_title="WEATHER_SYS_V2",layout="wide")
-
-# ---------------- ICONS ----------------
+# ---------------- CONFIG ----------------
 
 ICONS={
 "clear":"icons/clear.png",
 "cloud":"icons/clouds.png",
-"rain":"icons/drizzle.png",
+"drizzle":"icons/drizzle.png",
 "snow":"icons/snow.png",
 "mist":"icons/mist.png",
+"thunder":"icons/thunderstorm.png",
 "wind":"icons/wind.png",
 "humidity":"icons/humidity.png",
 "pressure":"icons/pressure.png",
@@ -37,61 +36,64 @@ WALLPAPERS={
 "default":"wallpapers/bg1.png"
 }
 
-# ---------------- IMAGE UTILS ----------------
+# ---------------- UTIL ----------------
 
-def img64(path):
+def encode(path):
     with open(path,"rb") as f:
         return base64.b64encode(f.read()).decode()
 
-def icon(path,w=50):
-    return f'<img src="data:image/png;base64,{img64(path)}" width="{w}">'
+def icon_img(path,w=60):
+    return f'<img src="data:image/png;base64,{encode(path)}" width="{w}">'
 
 # ---------------- BACKGROUND ----------------
 
 def set_bg(path):
 
-    st.markdown(f"""
+    st.markdown(
+    f"""
     <style>
     .stApp {{
-    background-image:url("data:image/png;base64,{img64(path)}");
+    background-image:url("data:image/png;base64,{encode(path)}");
     background-size:cover;
     }}
 
-    .card {{
+    .weather-card {{
     background:#13151f;
     border:1px solid #00ffff;
     border-radius:14px;
-    padding:18px;
+    padding:20px;
     text-align:center;
     color:white;
     }}
 
-    .ai-panel {{
+    .ask-btn {{
     position:fixed;
-    top:0;
-    right:0;
-    width:360px;
-    height:100%;
-    background:#0f1116;
-    border-left:2px solid #00ffff;
-    padding:20px;
-    overflow-y:auto;
-    z-index:9999;
+    bottom:30px;
+    right:30px;
+    background:#00ffff;
+    color:black;
+    border-radius:50px;
+    padding:14px 22px;
+    font-weight:bold;
+    z-index:999;
     }}
+
     </style>
-    """,unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+    )
 
 set_bg("wallpapers/bg1.png")
 
-# ---------------- API ----------------
+# ---------------- WEATHER API ----------------
 
 @st.cache_data(ttl=600)
 def get_weather(city):
 
-    weather=f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={API_KEY}"
-    forecast=f"https://api.openweathermap.org/data/2.5/forecast?q={city}&units=metric&appid={API_KEY}"
+    w=f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={API_KEY}"
+    f=f"https://api.openweathermap.org/data/2.5/forecast?q={city}&units=metric&appid={API_KEY}"
 
-    return requests.get(weather).json(),requests.get(forecast).json()
+    return requests.get(w).json(),requests.get(f).json()
 
 # ---------------- ML FORECAST ----------------
 
@@ -110,22 +112,23 @@ def ml_forecast(temps):
 # ---------------- LLM ----------------
 
 @st.cache_resource
-def load_model():
+def load_llm():
 
-    name="HuggingFaceTB/SmolLM2-135M-Instruct"
+    model_name="HuggingFaceTB/SmolLM2-135M-Instruct"
 
-    tokenizer=AutoTokenizer.from_pretrained(name)
-    model=AutoModelForCausalLM.from_pretrained(name).to("cpu")
+    tokenizer=AutoTokenizer.from_pretrained(model_name)
+
+    model=AutoModelForCausalLM.from_pretrained(model_name).to("cpu")
 
     return tokenizer,model
 
-tokenizer,model=load_model()
+tokenizer,model=load_llm()
 
-# ---------------- SEARCH ----------------
+# ---------------- UI ----------------
 
 st.title("WEATHER_SYS_V2")
 
-city=st.text_input("Search City","Bangalore")
+city=st.text_input("Search city","Bengaluru")
 
 if st.button("Search"):
 
@@ -135,7 +138,6 @@ if st.button("Search"):
 
         st.session_state.weather=weather
         st.session_state.forecast=forecast
-        st.session_state.messages=[]
 
 # ---------------- DASHBOARD ----------------
 
@@ -150,51 +152,28 @@ if "weather" in st.session_state:
     pressure=weather["main"]["pressure"]
     wind=weather["wind"]["speed"]
 
-# background
-    if "clear" in desc:
-        set_bg(WALLPAPERS["clear"])
-    elif "cloud" in desc:
-        set_bg(WALLPAPERS["cloud"])
-    elif "rain" in desc:
-        set_bg(WALLPAPERS["rain"])
-    else:
-        set_bg(WALLPAPERS["default"])
+    st.subheader(weather["name"])
 
-# weather cards
+
     c1,c2,c3,c4,c5=st.columns(5)
 
-    c1.markdown(f'<div class="card">{icon(ICONS["clear"])}<br>{desc}</div>',unsafe_allow_html=True)
-    c2.markdown(f'<div class="card">{icon(ICONS["temp"])}<br>{temp}°C</div>',unsafe_allow_html=True)
-    c3.markdown(f'<div class="card">{icon(ICONS["humidity"])}<br>{humidity}%</div>',unsafe_allow_html=True)
-    c4.markdown(f'<div class="card">{icon(ICONS["pressure"])}<br>{pressure}</div>',unsafe_allow_html=True)
-    c5.markdown(f'<div class="card">{icon(ICONS["wind"])}<br>{wind} m/s</div>',unsafe_allow_html=True)
+    with c1:
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(icon_status)}" width="70"><h4>Status</h4>{desc}</div>',unsafe_allow_html=True)
 
-# wind gauge
-    g1,g2,g3=st.columns(3)
+    with c2:
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["high_temp"])}" width="70"><h4>Temp</h4>{temp}°C</div>',unsafe_allow_html=True)
 
-    fig=go.Figure(go.Indicator(mode="gauge+number",value=wind,title={'text':'Wind'},gauge={'axis':{'range':[0,20]}}))
-    g1.plotly_chart(fig,width="stretch")
+    with c3:
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["humidity"])}" width="70"><h4>Humidity</h4>{humidity}%</div>',unsafe_allow_html=True)
 
-# uv meter
-    fig=go.Figure(go.Indicator(mode="gauge+number",value=5,title={'text':'UV Index'},gauge={'axis':{'range':[0,12]}}))
-    g2.plotly_chart(fig,width="stretch")
+    with c4:
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["pressure"])}" width="70"><h4>Pressure</h4>{pressure} hPa</div>',unsafe_allow_html=True)
 
-# sun arc
-    sunrise=weather["sys"]["sunrise"]
-    sunset=weather["sys"]["sunset"]
-    timezone=weather["timezone"]
+    with c5:
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["wind"])}" width="70"><h4>Wind</h4>{wind} m/s</div>',unsafe_allow_html=True)
 
-    now=datetime.datetime.now(datetime.UTC).timestamp()+timezone
-    progress=(now-sunrise)/(sunset-sunrise)
+# ---------------- 5 DAY FORECAST ----------------
 
-    fig=go.Figure()
-    fig.add_trace(go.Scatter(x=[0,0.5,1],y=[0,1,0],mode="lines"))
-    fig.add_trace(go.Scatter(x=[progress],y=[0.5],mode="text",text=["☀"],textfont=dict(size=40)))
-    fig.update_layout(height=250,xaxis_visible=False,yaxis_visible=False)
-
-    g3.plotly_chart(fig,width="stretch")
-
-# 5 day forecast
     st.subheader("5 Day Forecast")
 
     cols=st.columns(5)
@@ -214,15 +193,17 @@ if "weather" in st.session_state:
             t=item["main"]["temp"]
 
             cols[i].markdown(
-            f'<div class="card">{icon(ICONS["clear"],40)}<br>{day}<br>{t}°C</div>',
-            unsafe_allow_html=True)
+                f'<div class="weather-card">{day}<br>{t}°C</div>',
+                unsafe_allow_html=True
+            )
 
             i+=1
 
             if len(days)==5:
                 break
 
-# hourly
+# ---------------- HOURLY FORECAST ----------------
+
     st.subheader("24 Hour Forecast")
 
     hours=[]
@@ -230,30 +211,19 @@ if "weather" in st.session_state:
 
     for item in forecast["list"][:8]:
 
-        hour=datetime.datetime.fromtimestamp(item["dt"]).strftime("%H:%M")
-        t=item["main"]["temp"]
-
-        hours.append(hour)
-        temps.append(t)
+        hours.append(datetime.datetime.fromtimestamp(item["dt"]).strftime("%H:%M"))
+        temps.append(item["main"]["temp"])
 
     df=pd.DataFrame({"Hour":hours,"Temp":temps})
 
     st.plotly_chart(px.line(df,x="Hour",y="Temp",markers=True),width="stretch")
 
-# precipitation
-    rain=[item.get("pop",0)*100 for item in forecast["list"][:8]]
-
-    st.subheader("Rain Probability")
-
-    df2=pd.DataFrame({"Hour":hours,"Rain":rain})
-
-    st.plotly_chart(px.bar(df2,x="Hour",y="Rain"),width="stretch")
-
-# radar
-    lat=weather["coord"]["lat"]
-    lon=weather["coord"]["lon"]
+# ---------------- RADAR ----------------
 
     st.subheader("Radar Map")
+
+    lat=weather["coord"]["lat"]
+    lon=weather["coord"]["lon"]
 
     m=folium.Map(location=[lat,lon],zoom_start=6)
 
@@ -264,72 +234,69 @@ if "weather" in st.session_state:
 
     st_folium(m,width=900,height=500)
 
-# ---------------- AI CHAT ----------------
+# ---------------- FLOATING AI BUTTON ----------------
 
-if "ai_open" not in st.session_state:
-    st.session_state.ai_open=False
+st.markdown('<div class="ask-btn">Ask AI →</div>',unsafe_allow_html=True)
 
-if st.button("Ask AI"):
-    st.session_state.ai_open=not st.session_state.ai_open
+# ---------------- CHAT PANEL ----------------
 
-def context():
+st.sidebar.title("AI Weather Assistant")
 
-    w=st.session_state.weather
-    f=st.session_state.forecast
+def build_context():
 
-    desc=w["weather"][0]["description"]
-    temp=w["main"]["temp"]
-    humidity=w["main"]["humidity"]
-    wind=w["wind"]["speed"]
-    rain=f["list"][0].get("pop",0)*100
+    if "weather" not in st.session_state:
+        return "Weather unavailable"
+
+    weather=st.session_state.weather
+    forecast=st.session_state.forecast
+
+    desc=weather["weather"][0]["description"]
+    temp=weather["main"]["temp"]
+    humidity=weather["main"]["humidity"]
+
+    rain=forecast["list"][0].get("pop",0)*100
 
     return f"""
 Temperature: {temp}°C
 Condition: {desc}
 Humidity: {humidity}%
-Wind: {wind} m/s
-Rain tomorrow: {rain}%
+Rain probability tomorrow: {rain}%
 """
 
-if st.session_state.ai_open:
+if "messages" not in st.session_state:
+    st.session_state.messages=[]
 
-    st.markdown('<div class="ai-panel">',unsafe_allow_html=True)
+for m in st.session_state.messages:
 
-    st.markdown("### AI Weather Assistant")
+    with st.sidebar.chat_message(m["role"]):
+        st.markdown(m["content"])
 
-    if "messages" not in st.session_state:
-        st.session_state.messages=[]
+if prompt:=st.sidebar.chat_input("Ask weather questions"):
 
-    for m in st.session_state.messages:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
+    st.session_state.messages.append({"role":"user","content":prompt})
 
-    if prompt:=st.chat_input("Ask weather questions"):
+    context=build_context()
 
-        st.session_state.messages.append({"role":"user","content":prompt})
-
-        text=f"""
-You are a helpful weather assistant.
+    full_prompt=f"""
+You are a weather assistant.
 
 Weather data:
-{context()}
+{context}
 
 Question: {prompt}
 
-Answer briefly with advice.
+Give helpful advice.
 """
 
-        inputs=tokenizer(text,return_tensors="pt")
+    inputs=tokenizer(full_prompt,return_tensors="pt")
 
-        outputs=model.generate(**inputs,max_new_tokens=80)
+    outputs=model.generate(**inputs,max_new_tokens=100)
 
-        gen=outputs[0][inputs["input_ids"].shape[-1]:]
+    generated=outputs[0][inputs["input_ids"].shape[-1]:]
 
-        reply=tokenizer.decode(gen,skip_special_tokens=True)
+    response=tokenizer.decode(generated,skip_special_tokens=True)
 
-        with st.chat_message("assistant"):
-            st.markdown(reply)
+    st.session_state.messages.append({"role":"assistant","content":response})
 
-        st.session_state.messages.append({"role":"assistant","content":reply})
-
-    st.markdown("</div>",unsafe_allow_html=True)
+    with st.sidebar.chat_message("assistant"):
+        st.markdown(response)
