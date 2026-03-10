@@ -49,7 +49,7 @@ def icon_img(path,w=60):
 
 def get_icon(desc):
 
-    desc=desc.lower()
+    desc = desc.lower()
 
     if "clear" in desc:
         return ICONS["clear"]
@@ -152,6 +152,7 @@ def load_llm():
     model_name="HuggingFaceTB/SmolLM2-135M-Instruct"
 
     tokenizer=AutoTokenizer.from_pretrained(model_name)
+
     model=AutoModelForCausalLM.from_pretrained(model_name).to("cpu")
 
     return tokenizer,model
@@ -186,9 +187,9 @@ if "weather" in st.session_state:
     pressure=weather["main"]["pressure"]
     wind=weather["wind"]["speed"]
 
-    st.subheader(weather["name"])
+    icon_status = get_icon(desc)
 
-    icon_status=get_icon(desc)
+    st.subheader(weather["name"])
 
     c1,c2,c3,c4,c5=st.columns(5)
 
