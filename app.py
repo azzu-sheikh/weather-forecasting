@@ -13,37 +13,37 @@ import pydeck as pdk
 
 # ---------------- CONFIG ----------------
 
-API_KEY = "d0f4215f39312e5de368ee8edad554b8"
+API_KEY="d0f4215f39312e5de368ee8edad554b8"
 
-DEFAULT_BG = "wallpapers/bg1.png"
+DEFAULT_BG="wallpapers/bg1.png"
 
-WALLPAPERS = {
-    "clear":"wallpapers/bg2.png",
-    "cloud":"wallpapers/bg3.png",
-    "rain":"wallpapers/bg6.png",
-    "snow":"wallpapers/bg4.png",
-    "night":"wallpapers/bg5.png",
-    "default":"wallpapers/bg1.png"
+WALLPAPERS={
+"clear":"wallpapers/bg2.png",
+"cloud":"wallpapers/bg3.png",
+"rain":"wallpapers/bg6.png",
+"snow":"wallpapers/bg4.png",
+"night":"wallpapers/bg5.png",
+"default":"wallpapers/bg1.png"
 }
 
-ICONS = {
-    "clear":"icons/clear.png",
-    "cloud":"icons/clouds.png",
-    "drizzle":"icons/drizzle.png",
-    "snow":"icons/snow.png",
-    "mist":"icons/mist.png",
-    "thunder":"icons/thunderstorm.png",
-    "wind":"icons/wind.png",
-    "humidity":"icons/humidity.png",
-    "pressure":"icons/pressure.png",
-    "high_temp":"icons/high_temp.png",
-    "low_temp":"icons/low_temp.png"
+ICONS={
+"clear":"icons/clear.png",
+"cloud":"icons/clouds.png",
+"drizzle":"icons/drizzle.png",
+"snow":"icons/snow.png",
+"mist":"icons/mist.png",
+"thunder":"icons/thunderstorm.png",
+"wind":"icons/wind.png",
+"humidity":"icons/humidity.png",
+"pressure":"icons/pressure.png",
+"high_temp":"icons/high_temp.png",
+"low_temp":"icons/low_temp.png"
 }
 
 ACCENT="#00ffff"
 CARD_COLOR="#13151f"
 
-st.set_page_config(page_title="ai-weather-forecasting",layout="wide")
+st.set_page_config(page_title="WEATHER_SYS_V2",layout="wide")
 
 # ---------------- IMAGE ENCODER ----------------
 
@@ -89,6 +89,7 @@ set_background(DEFAULT_BG)
 
 # ---------------- API ----------------
 
+@st.cache_data(ttl=600)
 def get_weather(city):
 
     weather_url=f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={API_KEY}"
@@ -99,6 +100,7 @@ def get_weather(city):
 
     return weather,forecast
 
+@st.cache_data(ttl=600)
 def get_air_quality(lat,lon):
 
     url=f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
@@ -176,7 +178,7 @@ def uv_meter():
 
 def sun_moon_gauge(sunrise,sunset,timezone):
 
-    now=datetime.datetime.utcnow().timestamp()+timezone
+    now=datetime.datetime.now(datetime.UTC).timestamp()+timezone
 
     progress=(now-sunrise)/(sunset-sunrise)
 
@@ -246,7 +248,7 @@ if search:
     weather,forecast=get_weather(city)
 
     if "weather" not in weather:
-        st.error(weather.get("message"))
+        st.error(weather.get("message","City not found"))
         st.stop()
 
     desc=weather["weather"][0]["description"]
@@ -257,7 +259,6 @@ if search:
     sunrise=weather["sys"]["sunrise"]
     sunset=weather["sys"]["sunset"]
     timezone=weather["timezone"]
-    wind_deg=weather["wind"].get("deg",0)
 
     lat=weather["coord"]["lat"]
     lon=weather["coord"]["lon"]
@@ -293,9 +294,9 @@ if search:
 
     g1,g2,g3=st.columns(3)
 
-    g1.plotly_chart(wind_gauge(wind),use_container_width=True)
-    g2.plotly_chart(uv_meter(),use_container_width=True)
-    g3.plotly_chart(sun_moon_gauge(sunrise,sunset,timezone),use_container_width=True)
+    g1.plotly_chart(wind_gauge(wind),width="stretch")
+    g2.plotly_chart(uv_meter(),width="stretch")
+    g3.plotly_chart(sun_moon_gauge(sunrise,sunset,timezone),width="stretch")
 
 # ---------------- HOURLY TEMP ----------------
 
@@ -315,7 +316,7 @@ if search:
 
     fig=px.line(df,x="Hour",y="Temp",markers=True)
 
-    st.plotly_chart(fig,use_container_width=True)
+    st.plotly_chart(fig,width="stretch")
 
 # ---------------- PRECIPITATION ----------------
 
@@ -325,7 +326,7 @@ if search:
 
     fig2=px.bar(df2,x="Time",y="Rain%")
 
-    st.plotly_chart(fig2,use_container_width=True)
+    st.plotly_chart(fig2,width="stretch")
 
 # ---------------- ML FORECAST ----------------
 
@@ -355,13 +356,13 @@ if search:
 
     st.metric("Air Quality Index",aqi)
 
-# ---------------- WEATHER MAP ----------------
+# ---------------- MAP ----------------
 
     st.subheader("Weather Map")
 
     st.map(pd.DataFrame({"lat":[lat],"lon":[lon]}))
 
-# ---------------- RADAR MAP ----------------
+# ---------------- RADAR ----------------
 
     st.subheader("Storm Radar")
 
@@ -374,7 +375,7 @@ if search:
 
     st_folium(m,width=900,height=500)
 
-# ---------------- 3D WEATHER GLOBE ----------------
+# ---------------- 3D GLOBE ----------------
 
     st.subheader("3D Weather Globe")
 
@@ -396,6 +397,5 @@ if search:
             )
         ]
     )
-
 
     st.pydeck_chart(globe)
