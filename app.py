@@ -94,6 +94,13 @@ def get_weather(city):
 
     return weather,forecast
 
+@st.cache_data(ttl=600)
+def get_air_quality(lat,lon):
+
+    url=f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
+
+    return requests.get(url).json()
+
 # ---------------- HELPERS ----------------
 
 def choose_background(desc):
@@ -184,6 +191,32 @@ def sun_moon_gauge(sunrise,sunset,timezone):
     fig.update_layout(height=260,xaxis_visible=False,yaxis_visible=False)
 
     return fig
+
+# ---------------- ML FORECAST ----------------
+
+def ml_temp_forecast(temps):
+
+    X=np.arange(len(temps)).reshape(-1,1)
+    y=np.array(temps)
+
+    model=LinearRegression()
+    model.fit(X,y)
+
+    future=np.arange(len(temps),len(temps)+5).reshape(-1,1)
+
+    return model.predict(future)
+
+def rainfall_forecast(rain):
+
+    X=np.arange(len(rain)).reshape(-1,1)
+    y=np.array(rain)
+
+    model=LinearRegression()
+    model.fit(X,y)
+
+    future=np.arange(len(rain),len(rain)+5).reshape(-1,1)
+
+    return model.predict(future)
 
 # ---------------- UI ----------------
 
@@ -300,3 +333,13 @@ if "weather" in st.session_state:
     df=pd.DataFrame({"Hour":hours,"Temp":temps})
 
     st.plotly_chart(px.line(df,x="Hour",y="Temp",markers=True),width="stretch")
+
+# ---------------- PRECIPITATION ----------------
+
+    rain=[item.get("pop",0)*100 for item in forecast["list"][:8]]
+
+    df2=pd.DataFrame({"Hour":hours,"Rain%":rain})
+
+    st.subheader("Precipitation Probability")
+
+    st.plotly_chart(px.bar(df2,x="Hour",y="Rain%"),width="stretch")
