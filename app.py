@@ -39,10 +39,10 @@ ICONS={
 "low_temp":"icons/low_temp.png"
 }
 
-ACCENT="#00ffff"
+ACCENT="#131720"
 CARD_COLOR="#13151f"
 
-st.set_page_config(page_title="WEATHER_SYS_V2",layout="wide")
+st.set_page_config(page_title="AI Weather Forecasting",layout="wide")
 
 # ---------------- IMAGE ENCODER ----------------
 
@@ -220,9 +220,9 @@ def rainfall_forecast(rain):
 
 # ---------------- UI ----------------
 
-st.markdown('<div class="title">WEATHER_SYS_V2</div>',unsafe_allow_html=True)
+st.markdown('<div class="title">AI Weather Forecasting</div>',unsafe_allow_html=True)
 
-city=st.text_input("LOC","Bengaluru")
+city=st.text_input("Location","Bengaluru")
 
 if st.button("Search"):
 
@@ -259,7 +259,7 @@ if "weather" in st.session_state:
 
     icon_status=get_icon(desc)
 
-    st.subheader(f"// {city.upper()}")
+    st.subheader(f" {city.upper()}")
 
 # ---------------- WEATHER CARDS ----------------
 
@@ -343,3 +343,4 @@ if "weather" in st.session_state:
     st.subheader("Precipitation Probability")
 
     st.plotly_chart(px.bar(df2,x="Hour",y="Rain%"),width="stretch")
+
