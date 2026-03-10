@@ -13,59 +13,55 @@ import pydeck as pdk
 
 # ---------------- CONFIG ----------------
 
-API_KEY="d0f4215f39312e5de368ee8edad554b8"
+API_KEY = "d0f4215f39312e5de368ee8edad554b8"
 
-DEFAULT_BG="wallpapers/bg1.png"
+DEFAULT_BG = "wallpapers/bg1.png"
 
-WALLPAPERS={
-"clear":"wallpapers/bg2.png",
-"cloud":"wallpapers/bg3.png",
-"rain":"wallpapers/bg6.png",
-"snow":"wallpapers/bg4.png",
-"night":"wallpapers/bg5.png",
-"default":"wallpapers/bg1.png"
+WALLPAPERS = {
+    "clear": "wallpapers/bg2.png",
+    "cloud": "wallpapers/bg3.png",
+    "rain": "wallpapers/bg6.png",
+    "snow": "wallpapers/bg4.png",
+    "night": "wallpapers/bg5.png",
+    "default": "wallpapers/bg1.png"
 }
 
-ICONS={
-"clear":"icons/clear.png",
-"cloud":"icons/clouds.png",
-"drizzle":"icons/drizzle.png",
-"snow":"icons/snow.png",
-"mist":"icons/mist.png",
-"thunder":"icons/thunderstorm.png",
-"wind":"icons/wind.png",
-"humidity":"icons/humidity.png",
-"pressure":"icons/pressure.png",
-"high_temp":"icons/high_temp.png",
-"low_temp":"icons/low_temp.png"
+ICONS = {
+    "clear": "icons/clear.png",
+    "cloud": "icons/clouds.png",
+    "drizzle": "icons/drizzle.png",
+    "snow": "icons/snow.png",
+    "mist": "icons/mist.png",
+    "thunder": "icons/thunderstorm.png",
+    "wind": "icons/wind.png",
+    "humidity": "icons/humidity.png",
+    "pressure": "icons/pressure.png",
+    "high_temp": "icons/high_temp.png",
+    "low_temp": "icons/low_temp.png"
 }
 
-ACCENT="#00ffff"
-CARD_COLOR="#13151f"
+ACCENT = "#00ffff"
+CARD_COLOR = "#13151f"
 
-st.set_page_config(page_title="WEATHER_SYS_V2",layout="wide")
+st.set_page_config(page_title="WEATHER_SYS_V2", layout="wide")
 
 # ---------------- IMAGE ENCODER ----------------
 
 def encode_image(path):
-    with open(path,"rb") as f:
+    with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
 # ---------------- BACKGROUND ----------------
 
 def set_background(path):
-
-    encoded=encode_image(path)
-
+    encoded = encode_image(path)
     st.markdown(f"""
     <style>
-
     .stApp {{
         background-image:url("data:image/png;base64,{encoded}");
         background-size:cover;
         background-position:center;
     }}
-
     .card {{
         background:{CARD_COLOR};
         border:1px solid {ACCENT};
@@ -74,16 +70,14 @@ def set_background(path):
         text-align:center;
         color:white;
     }}
-
     .title {{
         text-align:center;
         font-size:42px;
         color:{ACCENT};
         font-weight:bold;
     }}
-
     </style>
-    """,unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 set_background(DEFAULT_BG)
 
@@ -91,27 +85,23 @@ set_background(DEFAULT_BG)
 
 @st.cache_data(ttl=600)
 def get_weather(city):
+    weather_url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={API_KEY}"
+    forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&units=metric&appid={API_KEY}"
 
-    weather_url=f"https://api.openweathermap.org/data/2.5/weather?q={city}&units=metric&appid={API_KEY}"
-    forecast_url=f"https://api.openweathermap.org/data/2.5/forecast?q={city}&units=metric&appid={API_KEY}"
+    weather = requests.get(weather_url).json()
+    forecast = requests.get(forecast_url).json()
 
-    weather=requests.get(weather_url).json()
-    forecast=requests.get(forecast_url).json()
-
-    return weather,forecast
+    return weather, forecast
 
 @st.cache_data(ttl=600)
-def get_air_quality(lat,lon):
-
-    url=f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
-
+def get_air_quality(lat, lon):
+    url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
     return requests.get(url).json()
 
 # ---------------- HELPERS ----------------
 
 def choose_background(desc):
-
-    desc=desc.lower()
+    desc = desc.lower()
 
     if "clear" in desc:
         return WALLPAPERS["clear"]
@@ -128,8 +118,7 @@ def choose_background(desc):
     return WALLPAPERS["default"]
 
 def get_icon(desc):
-
-    desc=desc.lower()
+    desc = desc.lower()
 
     if "thunder" in desc:
         return ICONS["thunder"]
@@ -151,51 +140,42 @@ def get_icon(desc):
 # ---------------- GAUGES ----------------
 
 def wind_gauge(speed):
-
-    fig=go.Figure(go.Indicator(
+    fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=speed,
-        title={"text":"Wind Speed"},
-        gauge={"axis":{"range":[0,20]}}
+        title={"text": "Wind Speed"},
+        gauge={"axis": {"range": [0, 20]}}
     ))
-
     fig.update_layout(height=260)
-
     return fig
 
 def uv_meter():
-
-    fig=go.Figure(go.Indicator(
+    fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=5,
-        title={"text":"UV Index"},
-        gauge={"axis":{"range":[0,12]}}
+        title={"text": "UV Index"},
+        gauge={"axis": {"range": [0, 12]}}
     ))
-
     fig.update_layout(height=260)
-
     return fig
 
-def sun_moon_gauge(sunrise,sunset,timezone):
+def sun_moon_gauge(sunrise, sunset, timezone):
+    now = datetime.datetime.now(datetime.UTC).timestamp() + timezone
+    progress = (now - sunrise) / (sunset - sunrise)
+    progress = max(0, min(progress, 1))
 
-    now=datetime.datetime.now(datetime.UTC).timestamp()+timezone
-
-    progress=(now-sunrise)/(sunset-sunrise)
-
-    progress=max(0,min(progress,1))
-
-    fig=go.Figure()
+    fig = go.Figure()
 
     fig.add_trace(go.Scatter(
-        x=[0,0.5,1],
-        y=[0,1,0],
+        x=[0, 0.5, 1],
+        y=[0, 1, 0],
         mode="lines"
     ))
 
-    x=progress
-    y=1-abs(progress-0.5)*2
+    x = progress
+    y = 1 - abs(progress - 0.5) * 2
 
-    icon="☀" if sunrise<=now<=sunset else "🌙"
+    icon = "☀" if sunrise <= now <= sunset else "🌙"
 
     fig.add_trace(go.Scatter(
         x=[x],
@@ -205,75 +185,81 @@ def sun_moon_gauge(sunrise,sunset,timezone):
         textfont=dict(size=40)
     ))
 
-    fig.update_layout(height=260,xaxis_visible=False,yaxis_visible=False)
+    fig.update_layout(height=260, xaxis_visible=False, yaxis_visible=False)
 
     return fig
 
 # ---------------- ML FORECAST ----------------
 
 def ml_temp_forecast(temps):
+    X = np.arange(len(temps)).reshape(-1,1)
+    y = np.array(temps)
 
-    X=np.arange(len(temps)).reshape(-1,1)
-    y=np.array(temps)
-
-    model=LinearRegression()
+    model = LinearRegression()
     model.fit(X,y)
 
-    future=np.arange(len(temps),len(temps)+5).reshape(-1,1)
+    future = np.arange(len(temps),len(temps)+5).reshape(-1,1)
 
     return model.predict(future)
 
 def rainfall_forecast(rain):
+    X = np.arange(len(rain)).reshape(-1,1)
+    y = np.array(rain)
 
-    X=np.arange(len(rain)).reshape(-1,1)
-    y=np.array(rain)
-
-    model=LinearRegression()
+    model = LinearRegression()
     model.fit(X,y)
 
-    future=np.arange(len(rain),len(rain)+5).reshape(-1,1)
+    future = np.arange(len(rain),len(rain)+5).reshape(-1,1)
 
     return model.predict(future)
 
 # ---------------- UI ----------------
 
-st.markdown('<div class="title">WEATHER_SYS_V2</div>',unsafe_allow_html=True)
+st.markdown('<div class="title">WEATHER_SYS_V2</div>', unsafe_allow_html=True)
 
-city=st.text_input("LOC","Bengaluru")
+city = st.text_input("LOC", "Bengaluru")
 
-search=st.button("Search")
+if st.button("Search"):
+    weather, forecast = get_weather(city)
 
-if search:
+    if "weather" in weather:
+        st.session_state.weather = weather
+        st.session_state.forecast = forecast
+        st.session_state.city = city
+    else:
+        st.error("City not found")
 
-    weather,forecast=get_weather(city)
+# ---------------- DISPLAY ----------------
 
-    if "weather" not in weather:
-        st.error(weather.get("message","City not found"))
-        st.stop()
+if "weather" in st.session_state:
 
-    desc=weather["weather"][0]["description"]
-    temp=weather["main"]["temp"]
-    humidity=weather["main"]["humidity"]
-    pressure=weather["main"]["pressure"]
-    wind=weather["wind"]["speed"]
-    sunrise=weather["sys"]["sunrise"]
-    sunset=weather["sys"]["sunset"]
-    timezone=weather["timezone"]
+    weather = st.session_state.weather
+    forecast = st.session_state.forecast
+    city = st.session_state.city
 
-    lat=weather["coord"]["lat"]
-    lon=weather["coord"]["lon"]
+    desc = weather["weather"][0]["description"]
+    temp = weather["main"]["temp"]
+    humidity = weather["main"]["humidity"]
+    pressure = weather["main"]["pressure"]
+    wind = weather["wind"]["speed"]
+    sunrise = weather["sys"]["sunrise"]
+    sunset = weather["sys"]["sunset"]
+    timezone = weather["timezone"]
 
-    bg=choose_background(desc)
+    lat = weather["coord"]["lat"]
+    lon = weather["coord"]["lon"]
+
+    bg = choose_background(desc)
     set_background(bg)
 
-    icon_status=get_icon(desc)
-    icon_temp=ICONS["high_temp"] if temp>18 else ICONS["low_temp"]
+    icon_status = get_icon(desc)
+    icon_temp = ICONS["high_temp"] if temp>18 else ICONS["low_temp"]
 
     st.subheader(f"// {city.upper()}")
 
-# ---------------- WEATHER CARDS ----------------
+# WEATHER CARDS
 
-    c1,c2,c3,c4,c5=st.columns(5)
+    c1,c2,c3,c4,c5 = st.columns(5)
 
     with c1:
         st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(icon_status)}" width="70"><h4>Status</h4>{desc}</div>',unsafe_allow_html=True)
@@ -290,22 +276,21 @@ if search:
     with c5:
         st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["wind"])}" width="70"><h4>Wind</h4>{wind} m/s</div>',unsafe_allow_html=True)
 
-# ---------------- GAUGES ----------------
+# GAUGES
 
-    g1,g2,g3=st.columns(3)
+    g1,g2,g3 = st.columns(3)
 
-    g1.plotly_chart(wind_gauge(wind),width="stretch")
-    g2.plotly_chart(uv_meter(),width="stretch")
-    g3.plotly_chart(sun_moon_gauge(sunrise,sunset,timezone),width="stretch")
+    g1.plotly_chart(wind_gauge(wind), width="stretch")
+    g2.plotly_chart(uv_meter(), width="stretch")
+    g3.plotly_chart(sun_moon_gauge(sunrise,sunset,timezone), width="stretch")
 
-# ---------------- HOURLY TEMP ----------------
+# HOURLY TEMP
 
     hours=[]
     temps=[]
     rain=[]
 
     for item in forecast["list"][:12]:
-
         hours.append(datetime.datetime.fromtimestamp(item["dt"]).strftime("%H:%M"))
         temps.append(item["main"]["temp"])
         rain.append(item.get("pop",0)*100)
@@ -313,56 +298,44 @@ if search:
     df=pd.DataFrame({"Hour":hours,"Temp":temps})
 
     st.subheader("Hourly Temperature")
+    st.plotly_chart(px.line(df,x="Hour",y="Temp",markers=True),width="stretch")
 
-    fig=px.line(df,x="Hour",y="Temp",markers=True)
-
-    st.plotly_chart(fig,width="stretch")
-
-# ---------------- PRECIPITATION ----------------
+# PRECIPITATION
 
     df2=pd.DataFrame({"Time":hours,"Rain%":rain})
 
     st.subheader("Precipitation Probability")
+    st.plotly_chart(px.bar(df2,x="Time",y="Rain%"),width="stretch")
 
-    fig2=px.bar(df2,x="Time",y="Rain%")
-
-    st.plotly_chart(fig2,width="stretch")
-
-# ---------------- ML FORECAST ----------------
+# ML FORECAST
 
     pred=ml_temp_forecast(temps)
-
     pred_df=pd.DataFrame({"Future":[f"+{i+1}h" for i in range(len(pred))],"Temp":pred})
 
     st.subheader("ML Temperature Forecast")
-
     st.line_chart(pred_df.set_index("Future"))
 
-# ---------------- AI RAINFALL ----------------
+# AI RAINFALL
 
     rain_pred=rainfall_forecast(rain)
-
     rain_df=pd.DataFrame({"Future":[f"+{i+1}h" for i in range(len(rain_pred))],"Rain%":rain_pred})
 
     st.subheader("AI Rainfall Forecast")
-
     st.line_chart(rain_df.set_index("Future"))
 
-# ---------------- AQI ----------------
+# AQI
 
     air=get_air_quality(lat,lon)
-
     aqi=air["list"][0]["main"]["aqi"]
 
     st.metric("Air Quality Index",aqi)
 
-# ---------------- MAP ----------------
+# MAP
 
     st.subheader("Weather Map")
-
     st.map(pd.DataFrame({"lat":[lat],"lon":[lon]}))
 
-# ---------------- RADAR ----------------
+# RADAR
 
     st.subheader("Storm Radar")
 
@@ -375,7 +348,7 @@ if search:
 
     st_folium(m,width=900,height=500)
 
-# ---------------- 3D GLOBE ----------------
+# 3D GLOBE
 
     st.subheader("3D Weather Globe")
 
