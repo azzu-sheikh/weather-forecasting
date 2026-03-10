@@ -9,7 +9,6 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 import folium
 from streamlit_folium import st_folium
-import pydeck as pdk
 
 # ---------------- CONFIG ----------------
 
@@ -95,13 +94,6 @@ def get_weather(city):
 
     return weather,forecast
 
-@st.cache_data(ttl=600)
-def get_air_quality(lat,lon):
-
-    url=f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
-
-    return requests.get(url).json()
-
 # ---------------- HELPERS ----------------
 
 def choose_background(desc):
@@ -176,59 +168,22 @@ def sun_moon_gauge(sunrise,sunset,timezone):
     now=datetime.datetime.now(datetime.UTC).timestamp()+timezone
 
     progress=(now-sunrise)/(sunset-sunrise)
-
     progress=max(0,min(progress,1))
 
     fig=go.Figure()
 
-    fig.add_trace(go.Scatter(
-        x=[0,0.5,1],
-        y=[0,1,0],
-        mode="lines"
-    ))
+    fig.add_trace(go.Scatter(x=[0,0.5,1],y=[0,1,0],mode="lines"))
 
     x=progress
     y=1-abs(progress-0.5)*2
 
     icon="☀" if sunrise<=now<=sunset else "🌙"
 
-    fig.add_trace(go.Scatter(
-        x=[x],
-        y=[y],
-        mode="text",
-        text=[icon],
-        textfont=dict(size=40)
-    ))
+    fig.add_trace(go.Scatter(x=[x],y=[y],mode="text",text=[icon],textfont=dict(size=40)))
 
     fig.update_layout(height=260,xaxis_visible=False,yaxis_visible=False)
 
     return fig
-
-# ---------------- ML FORECAST ----------------
-
-def ml_temp_forecast(temps):
-
-    X=np.arange(len(temps)).reshape(-1,1)
-    y=np.array(temps)
-
-    model=LinearRegression()
-    model.fit(X,y)
-
-    future=np.arange(len(temps),len(temps)+5).reshape(-1,1)
-
-    return model.predict(future)
-
-def rainfall_forecast(rain):
-
-    X=np.arange(len(rain)).reshape(-1,1)
-    y=np.array(rain)
-
-    model=LinearRegression()
-    model.fit(X,y)
-
-    future=np.arange(len(rain),len(rain)+5).reshape(-1,1)
-
-    return model.predict(future)
 
 # ---------------- UI ----------------
 
@@ -246,9 +201,6 @@ if st.button("Search"):
         st.session_state.forecast=forecast
         st.session_state.city=city
 
-    else:
-        st.error("City not found")
-
 # ---------------- DISPLAY ----------------
 
 if "weather" in st.session_state:
@@ -262,6 +214,7 @@ if "weather" in st.session_state:
     humidity=weather["main"]["humidity"]
     pressure=weather["main"]["pressure"]
     wind=weather["wind"]["speed"]
+
     sunrise=weather["sys"]["sunrise"]
     sunset=weather["sys"]["sunset"]
     timezone=weather["timezone"]
@@ -269,11 +222,9 @@ if "weather" in st.session_state:
     lat=weather["coord"]["lat"]
     lon=weather["coord"]["lon"]
 
-    bg=choose_background(desc)
-    set_background(bg)
+    set_background(choose_background(desc))
 
     icon_status=get_icon(desc)
-    icon_temp=ICONS["high_temp"] if temp>18 else ICONS["low_temp"]
 
     st.subheader(f"// {city.upper()}")
 
@@ -285,7 +236,7 @@ if "weather" in st.session_state:
         st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(icon_status)}" width="70"><h4>Status</h4>{desc}</div>',unsafe_allow_html=True)
 
     with c2:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(icon_temp)}" width="70"><h4>Temp</h4>{temp}°C</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["high_temp"])}" width="70"><h4>Temp</h4>{temp}°C</div>',unsafe_allow_html=True)
 
     with c3:
         st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["humidity"])}" width="70"><h4>Humidity</h4>{humidity}%</div>',unsafe_allow_html=True)
@@ -303,99 +254,6 @@ if "weather" in st.session_state:
     g1.plotly_chart(wind_gauge(wind),width="stretch")
     g2.plotly_chart(uv_meter(),width="stretch")
     g3.plotly_chart(sun_moon_gauge(sunrise,sunset,timezone),width="stretch")
-
-# ---------------- HOURLY TEMPERATURE ----------------
-
-    hours=[]
-    temps=[]
-    rain=[]
-
-    for item in forecast["list"][:12]:
-
-        hours.append(datetime.datetime.fromtimestamp(item["dt"]).strftime("%H:%M"))
-        temps.append(item["main"]["temp"])
-        rain.append(item.get("pop",0)*100)
-
-    df=pd.DataFrame({"Hour":hours,"Temp":temps})
-
-    st.subheader("Hourly Temperature")
-    st.plotly_chart(px.line(df,x="Hour",y="Temp",markers=True),width="stretch")
-
-# ---------------- PRECIPITATION ----------------
-
-    df2=pd.DataFrame({"Time":hours,"Rain%":rain})
-
-    st.subheader("Precipitation Probability")
-    st.plotly_chart(px.bar(df2,x="Time",y="Rain%"),width="stretch")
-
-# ---------------- ML FORECAST ----------------
-
-    pred=ml_temp_forecast(temps)
-
-    pred_df=pd.DataFrame({"Future":[f"+{i+1}h" for i in range(len(pred))],"Temp":pred})
-
-    st.subheader("ML Temperature Forecast")
-    st.line_chart(pred_df.set_index("Future"))
-
-# ---------------- AI RAINFALL ----------------
-
-    rain_pred=rainfall_forecast(rain)
-
-    rain_df=pd.DataFrame({"Future":[f"+{i+1}h" for i in range(len(rain_pred))],"Rain%":rain_pred})
-
-    st.subheader("AI Rainfall Forecast")
-    st.line_chart(rain_df.set_index("Future"))
-
-# ---------------- AQI ----------------
-
-    air=get_air_quality(lat,lon)
-
-    aqi=air["list"][0]["main"]["aqi"]
-
-    st.metric("Air Quality Index",aqi)
-
-# ---------------- MAP ----------------
-
-    st.subheader("Weather Map")
-    st.map(pd.DataFrame({"lat":[lat],"lon":[lon]}))
-
-# ---------------- RADAR ----------------
-
-    st.subheader("Storm Radar")
-
-    m=folium.Map(location=[lat,lon],zoom_start=6)
-
-    folium.TileLayer(
-        tiles=f"https://tile.openweathermap.org/map/precipitation_new/{{z}}/{{x}}/{{y}}.png?appid={API_KEY}",
-        attr="OpenWeatherMap"
-    ).add_to(m)
-
-    st_folium(m,width=900,height=500)
-
-# ---------------- 3D WEATHER GLOBE ----------------
-
-    st.subheader("3D Weather Globe")
-
-    globe=pdk.Deck(
-        map_style="mapbox://styles/mapbox/satellite-v9",
-        initial_view_state=pdk.ViewState(
-            latitude=lat,
-            longitude=lon,
-            zoom=1,
-            pitch=45
-        ),
-        layers=[
-            pdk.Layer(
-                "ScatterplotLayer",
-                data=[{"lat":lat,"lon":lon}],
-                get_position="[lon, lat]",
-                get_radius=50000,
-                get_color="[255,0,0]"
-            )
-        ]
-    )
-
-    st.pydeck_chart(globe)
 
 # ---------------- 5 DAY FORECAST ----------------
 
@@ -427,3 +285,18 @@ if "weather" in st.session_state:
             if len(days)==5:
                 break
 
+# ---------------- FULL DAY FORECAST ----------------
+
+    st.subheader("24 Hour Forecast")
+
+    hours=[]
+    temps=[]
+
+    for item in forecast["list"][:8]:
+
+        hours.append(datetime.datetime.fromtimestamp(item["dt"]).strftime("%H:%M"))
+        temps.append(item["main"]["temp"])
+
+    df=pd.DataFrame({"Hour":hours,"Temp":temps})
+
+    st.plotly_chart(px.line(df,x="Hour",y="Temp",markers=True),width="stretch")
