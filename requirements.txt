@@ -8,3 +8,5 @@ folium
 streamlit-folium
 pydeck
 pillow
+transformers
+torch
