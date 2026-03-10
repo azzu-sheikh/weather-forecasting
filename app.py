@@ -9,13 +9,12 @@ import plotly.express as px
 from sklearn.linear_model import LinearRegression
 import folium
 from streamlit_folium import st_folium
-
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 # ---------------- CONFIG ----------------
 
-API_KEY="d0f4215f39312e5de368ee8edad554b8"
+API_KEY="YOUR_OPENWEATHER_API_KEY"
 
 DEFAULT_BG="wallpapers/bg1.png"
 
@@ -60,6 +59,7 @@ def set_bg(path):
 
     st.markdown(f"""
     <style>
+
     .stApp {{
         background-image:url("data:image/png;base64,{img}");
         background-size:cover;
@@ -76,10 +76,23 @@ def set_bg(path):
 
     .title {{
         text-align:center;
-        font-size:40px;
+        font-size:42px;
         color:{ACCENT};
         font-weight:bold;
     }}
+
+    .askai {{
+        position:fixed;
+        bottom:30px;
+        right:30px;
+        background:#00ffff;
+        color:black;
+        padding:14px 20px;
+        border-radius:50px;
+        font-weight:bold;
+        z-index:999;
+    }}
+
     </style>
     """,unsafe_allow_html=True)
 
@@ -147,7 +160,7 @@ def wind_gauge(speed):
     fig=go.Figure(go.Indicator(
         mode="gauge+number",
         value=speed,
-        title={"text":"Wind"},
+        title={"text":"Wind Speed"},
         gauge={"axis":{"range":[0,20]}}
     ))
 
@@ -203,7 +216,7 @@ def ml_forecast(temps):
 
     return model.predict(future)
 
-# ---------------- LLM MODEL ----------------
+# ---------------- LLM ----------------
 
 @st.cache_resource
 def load_llm():
@@ -237,13 +250,12 @@ if st.button("Search"):
         st.session_state.forecast=forecast
         st.session_state.city=city
 
-# ---------------- DISPLAY ----------------
+# ---------------- DASHBOARD ----------------
 
 if "weather" in st.session_state:
 
     weather=st.session_state.weather
     forecast=st.session_state.forecast
-    city=st.session_state.city
 
     desc=weather["weather"][0]["description"]
     temp=weather["main"]["temp"]
@@ -251,46 +263,41 @@ if "weather" in st.session_state:
     pressure=weather["main"]["pressure"]
     wind=weather["wind"]["speed"]
 
+    lat=weather["coord"]["lat"]
+    lon=weather["coord"]["lon"]
+
     sunrise=weather["sys"]["sunrise"]
     sunset=weather["sys"]["sunset"]
     timezone=weather["timezone"]
 
-    lat=weather["coord"]["lat"]
-    lon=weather["coord"]["lon"]
-
     set_bg(bg_from_weather(desc))
 
-    st.subheader(city.upper())
-
-# ---------------- WEATHER CARDS ----------------
-
+# cards
     c1,c2,c3,c4,c5=st.columns(5)
 
     with c1:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(icon(desc))}" width="60"><br>Status<br>{desc}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card">Status<br>{desc}</div>',unsafe_allow_html=True)
 
     with c2:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["high_temp"])}" width="60"><br>Temp<br>{temp}°C</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card">Temp<br>{temp}°C</div>',unsafe_allow_html=True)
 
     with c3:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["humidity"])}" width="60"><br>Humidity<br>{humidity}%</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card">Humidity<br>{humidity}%</div>',unsafe_allow_html=True)
 
     with c4:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["pressure"])}" width="60"><br>Pressure<br>{pressure}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card">Pressure<br>{pressure}</div>',unsafe_allow_html=True)
 
     with c5:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["wind"])}" width="60"><br>Wind<br>{wind}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card">Wind<br>{wind}</div>',unsafe_allow_html=True)
 
-# ---------------- GAUGES ----------------
-
+# gauges
     g1,g2,g3=st.columns(3)
 
     g1.plotly_chart(wind_gauge(wind),width="stretch")
     g2.plotly_chart(uv_meter(),width="stretch")
     g3.plotly_chart(sun_arc(sunrise,sunset,timezone),width="stretch")
 
-# ---------------- 5 DAY FORECAST ----------------
-
+# 5 day forecast
     st.subheader("5 Day Forecast")
 
     cols=st.columns(5)
@@ -316,8 +323,7 @@ if "weather" in st.session_state:
             if len(days)==5:
                 break
 
-# ---------------- HOURLY FORECAST ----------------
-
+# hourly forecast
     st.subheader("24 Hour Forecast")
 
     hours=[]
@@ -332,8 +338,7 @@ if "weather" in st.session_state:
 
     st.plotly_chart(px.line(df,x="Hour",y="Temp",markers=True),width="stretch")
 
-# ---------------- PRECIPITATION ----------------
-
+# rain
     rain=[item.get("pop",0)*100 for item in forecast["list"][:8]]
 
     df2=pd.DataFrame({"Hour":hours,"Rain%":rain})
@@ -342,15 +347,27 @@ if "weather" in st.session_state:
 
     st.plotly_chart(px.bar(df2,x="Hour",y="Rain%"),width="stretch")
 
-# ---------------- AI WEATHER ASSISTANT ----------------
+# radar map
+    st.subheader("Radar Map")
 
-st.divider()
+    m=folium.Map(location=[lat,lon],zoom_start=6)
+
+    folium.TileLayer(
+        tiles=f"https://tile.openweathermap.org/map/precipitation_new/{{z}}/{{x}}/{{y}}.png?appid={API_KEY}",
+        attr="OpenWeather"
+    ).add_to(m)
+
+    st_folium(m,width=900,height=500)
+
+# ---------------- AI ASSISTANT ----------------
+
+st.markdown("---")
 st.header("AI Weather Assistant")
 
 def build_context():
 
     if "weather" not in st.session_state:
-        return "Weather data not loaded."
+        return "Weather unavailable."
 
     weather=st.session_state.weather
     forecast=st.session_state.forecast
@@ -358,6 +375,7 @@ def build_context():
     desc=weather["weather"][0]["description"]
     temp=weather["main"]["temp"]
     humidity=weather["main"]["humidity"]
+    wind=weather["wind"]["speed"]
 
     rain=forecast["list"][0].get("pop",0)*100
 
@@ -365,6 +383,7 @@ def build_context():
 Temperature: {temp}°C
 Condition: {desc}
 Humidity: {humidity}%
+Wind: {wind}
 Rain probability tomorrow: {rain}%
 """
 
@@ -376,12 +395,9 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-if prompt:=st.chat_input("Ask about weather..."):
+if prompt:=st.chat_input("Ask weather questions..."):
 
     st.session_state.messages.append({"role":"user","content":prompt})
-
-    with st.chat_message("user"):
-        st.markdown(prompt)
 
     context=build_context()
 
@@ -391,16 +407,18 @@ You are a weather assistant.
 Weather data:
 {context}
 
-User question: {prompt}
+Question: {prompt}
 
-Give helpful advice.
+Give practical advice.
 """
 
     inputs=tokenizer(full_prompt,return_tensors="pt")
 
     outputs=model.generate(**inputs,max_new_tokens=120)
 
-    response=tokenizer.decode(outputs[0],skip_special_tokens=True)
+    generated=outputs[0][inputs["input_ids"].shape[-1]:]
+
+    response=tokenizer.decode(generated,skip_special_tokens=True)
 
     with st.chat_message("assistant"):
         st.markdown(response)
