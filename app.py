@@ -45,6 +45,32 @@ def encode(path):
 def icon_img(path,w=60):
     return f'<img src="data:image/png;base64,{encode(path)}" width="{w}">'
 
+# ---------------- WEATHER ICON SELECTOR ----------------
+
+def get_icon(desc):
+
+    desc=desc.lower()
+
+    if "clear" in desc:
+        return ICONS["clear"]
+
+    if "cloud" in desc:
+        return ICONS["cloud"]
+
+    if "rain" in desc:
+        return ICONS["drizzle"]
+
+    if "snow" in desc:
+        return ICONS["snow"]
+
+    if "mist" in desc or "fog" in desc:
+        return ICONS["mist"]
+
+    if "thunder" in desc:
+        return ICONS["thunder"]
+
+    return ICONS["clear"]
+
 # ---------------- BACKGROUND ----------------
 
 def set_bg(path):
@@ -58,6 +84,15 @@ def set_bg(path):
     }}
 
     .weather-card {{
+    background:#13151f;
+    border:1px solid #00ffff;
+    border-radius:14px;
+    padding:20px;
+    text-align:center;
+    color:white;
+    }}
+
+    .card {{
     background:#13151f;
     border:1px solid #00ffff;
     border-radius:14px;
@@ -117,7 +152,6 @@ def load_llm():
     model_name="HuggingFaceTB/SmolLM2-135M-Instruct"
 
     tokenizer=AutoTokenizer.from_pretrained(model_name)
-
     model=AutoModelForCausalLM.from_pretrained(model_name).to("cpu")
 
     return tokenizer,model
@@ -154,23 +188,24 @@ if "weather" in st.session_state:
 
     st.subheader(weather["name"])
 
+    icon_status=get_icon(desc)
 
     c1,c2,c3,c4,c5=st.columns(5)
 
     with c1:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(icon_status)}" width="70"><h4>Status</h4>{desc}</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(icon_status)}" width="70"><h4>Status</h4>{desc}</div>',unsafe_allow_html=True)
 
     with c2:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["high_temp"])}" width="70"><h4>Temp</h4>{temp}°C</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["temp"])}" width="70"><h4>Temp</h4>{temp}°C</div>',unsafe_allow_html=True)
 
     with c3:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["humidity"])}" width="70"><h4>Humidity</h4>{humidity}%</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["humidity"])}" width="70"><h4>Humidity</h4>{humidity}%</div>',unsafe_allow_html=True)
 
     with c4:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["pressure"])}" width="70"><h4>Pressure</h4>{pressure} hPa</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["pressure"])}" width="70"><h4>Pressure</h4>{pressure} hPa</div>',unsafe_allow_html=True)
 
     with c5:
-        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode_image(ICONS["wind"])}" width="70"><h4>Wind</h4>{wind} m/s</div>',unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><img src="data:image/png;base64,{encode(ICONS["wind"])}" width="70"><h4>Wind</h4>{wind} m/s</div>',unsafe_allow_html=True)
 
 # ---------------- 5 DAY FORECAST ----------------
 
