@@ -43,7 +43,7 @@ ICONS = {
 ACCENT="#00ffff"
 CARD_COLOR="#13151f"
 
-st.set_page_config(page_title="WEATHER_SYS_V2",layout="wide")
+st.set_page_config(page_title="ai-weather-forecasting",layout="wide")
 
 # ---------------- IMAGE ENCODER ----------------
 
@@ -396,5 +396,6 @@ if search:
             )
         ]
     )
+
 
     st.pydeck_chart(globe)
