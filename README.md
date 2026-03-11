@@ -207,11 +207,11 @@ The assistant analyzes:
 |forecast data              |
 | ------------------------- |
 |humidity levels            |
-|                           |
+| ------------------------- |
 |precipitation probability  |
-|                           |
+| ------------------------- |
 |ML predictions             |
----
+| ------------------------- |
 Model used:
 ```
 SmolLM2-135M-Instruct
