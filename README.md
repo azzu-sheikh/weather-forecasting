@@ -203,9 +203,9 @@ Is it safe to travel today?
 Should farmers irrigate crops today?
 ```
 The assistant analyzes:
----
+
 |forecast data              |
-|                           |
+| ------------------------- |
 |humidity levels            |
 |                           |
 |precipitation probability  |
