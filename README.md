@@ -298,11 +298,13 @@ The dashboard will open at:
 ```
 http://localhost:8501
 ```
-👨‍💻 Author
-Abdul Azeem Sheikh
+---
+
+# 👨‍💻 Author
+## Abdul Azeem Sheikh
 
 Information Science Engineer
-AI • Machine Learning • Data Science
+AI • Machine Learning • Data Scientist
 
 Focused on building AI-powered systems for real-world decision making.
 
