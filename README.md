@@ -203,15 +203,15 @@ Is it safe to travel today?
 Should farmers irrigate crops today?
 ```
 The assistant analyzes:
-
-forecast data
-
-humidity levels
-
-precipitation probability
-
-ML predictions
-
+---
+|forecast data              |
+|                           |
+|humidity levels            |
+|                           |
+|precipitation probability  |
+|                           |
+|ML predictions             |
+---
 Model used:
 ```
 SmolLM2-135M-Instruct
@@ -227,15 +227,18 @@ Folium + OpenWeatherMap Tiles
 This allows users to visually track precipitation patterns across regions.
 
 🧩 Technology Stack
-Category	Technologies
-Programming	Python
-Web Framework	Streamlit
-Data Engineering	Pandas, NumPy
-Machine Learning	Scikit-Learn
-AI Assistant	HuggingFace Transformers
-Visualization	Plotly
-Mapping	Folium
-Weather Data	OpenWeather API
+|Category	         |   Technologies              |
+| ---------------- | --------------------------- |
+|Programming	    |   Python                    |
+|Web Framework	    |   Streamlit                 |
+|Data Engineering  |   Pandas, NumPy             |
+|Machine Learning  |   Scikit-Learn              |
+|AI Assistant	    |   HuggingFace Transformers  |
+|Visualization	    |   Plotly                    |
+|Mapping	         |   Folium                    |
+|Weather Data	    |  OpenWeather API            |
+---
+
 🏗️ System Architecture
 ```
 User Input
