@@ -1,5 +1,5 @@
 # 🌦️ AI Weather Forecasting Intelligence System
-
+Predicting blue skies and helping you plan for the grey ones. ☁️✨
 <div align="center">
 
 ### 🚀 AI + Machine Learning Powered Weather Intelligence Platform
